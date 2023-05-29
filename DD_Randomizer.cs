@@ -319,6 +319,9 @@ namespace DD_Randomizer
                 GameSave.GetSaveData().SetKeyState(__instance.doorId, true, true);
                 GameSave.SaveGameState();
             }
+            // you'll spawn on at the door that leads to gondola
+            GameSave.GetSaveData().SetSpawnPoint(__instance.targetScene, __instance.doorId);
+            GameSave.SaveGameState();
         }
 
         // Patching transition triggers randomized

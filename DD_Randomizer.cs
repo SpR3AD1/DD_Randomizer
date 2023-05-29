@@ -478,7 +478,7 @@ namespace DD_Randomizer
         [HarmonyPostfix]
         public static void Respawn54_mypatch(string ___spawnId)
         {
-            Log.LogWarning("Load spawnID: " + ___spawnId);
+            Log.LogWarning("post Load saveFile spawnID: " + ___spawnId);
             /*try
             {
                 string callingFuncName = new StackFrame(1).GetMethod().Name;

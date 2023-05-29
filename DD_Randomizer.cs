@@ -4,15 +4,9 @@ using BepInEx;
 using HarmonyLib;
 using BepInEx.Logging;
 using System.Linq;
-using System.Collections;
-using System.Text.RegularExpressions;
 using UnityEngine;
-using System.Reflection;
 using Random = System.Random;
 using BepInEx.Configuration;
-using System.Runtime.CompilerServices;
-using System.Diagnostics;
-using AK.Wwise;
 
 namespace DD_Randomizer
 {
@@ -174,6 +168,7 @@ namespace DD_Randomizer
         // list with shuffled IDs
         public static List<int> shuffleIDs = new List<int>(new int[IDs.Count()]);
 
+        // new file loaded? Used for fixing transition spawn after S&Q
         public static bool freshload = false;
 
         // Random Seed
@@ -266,7 +261,6 @@ namespace DD_Randomizer
                 Entries.RemoveAt(0);
                 Exits.Remove(ActiveExits[swap]);
                 Exits.RemoveAt(0);
-
             }
         }
 
@@ -332,11 +326,8 @@ namespace DD_Randomizer
         [HarmonyPrefix]
         public static bool OnTriggerEnter_MyPatch(DoorTrigger __instance, Collider collider, ShortcutDoor ___parentDoor, bool ___triggered)
         {
-            Log.LogWarning("hit trigger: " + __instance.doorId + " " + __instance.sceneToLoad);
             if (___parentDoor == null)
             {
-
-                //Log.LogWarning("hit trigger: " + __instance.doorId + " " + __instance.sceneToLoad);
                 int id = IDs.FindIndex(x => x.Equals(__instance.doorId, StringComparison.OrdinalIgnoreCase));
                 if (id > -1)
                 {
@@ -350,7 +341,6 @@ namespace DD_Randomizer
                     __instance.sceneToLoad = scene_to_load;
                     __instance.targetDoor = door_to_load;
                     __instance.doorId = door_to_load;
-                    //Log.LogWarning("changed to: " + door_to_load + " " + scene_to_load);
                     if ((door_to_load.Contains("sdoor_")) && scene_to_load.Contains("hallofdoors"))
                     {
                         GameSave.GetSaveData().SetKeyState(door_to_load, true, true);
@@ -368,10 +358,27 @@ namespace DD_Randomizer
         {
             if (__instance.doorId != "")
             {
-                Log.LogWarning("saved: " + __instance.sceneToLoad.ToString() + " " + __instance.doorId.ToString());
                 GameSave.GetSaveData().SetSpawnPoint(__instance.sceneToLoad, __instance.doorId);
             }
             GameSave.SaveGameState();
+        }
+
+        // fix S&Q transition spawn
+        [HarmonyPatch(typeof(DoorTrigger), "Start")]
+        [HarmonyPostfix]
+        public static void DoorTriggerSpawn_mypatch(DoorTrigger __instance)
+        {
+            if (freshload)
+            {
+                if (__instance.doorId == GameSave.GetSaveData().GetSpawnID())
+                {
+                    PlayerGlobal.instance.SetPosition(__instance.spawnPoint.position, false, false);
+                    PlayerGlobal.instance.SetRotation(__instance.spawnPoint.rotation);
+                    PlayerGlobal.SetSpawnPos(__instance.spawnPoint.position, __instance.spawnPoint.rotation);
+                    PlayerGlobal.instance.SetSafePos(__instance.spawnPoint.position);
+                    freshload = false;
+                }
+            }
         }
 
         // fix death Spawn
@@ -395,6 +402,7 @@ namespace DD_Randomizer
         [HarmonyPostfix]
         public static void LoadDefaultValues_MyPatch()
         {
+            freshload = true;
             if (!GameSave.GetSaveData().IsKeyUnlocked("cts_bus"))
             {
                 GameSave.GetSaveData().SetKeyState("cts_bus", true, true);
@@ -434,125 +442,9 @@ namespace DD_Randomizer
 
                 // set spawn to tutorial door
                 GameSave.GetSaveData().SetSpawnPoint("lvl_hallofdoors", "sdoor_tutorial");
-                // set spawn to lockstone
-                GameSave.GetSaveData().SetSpawnPoint("lvl_frozenfortress", "d_sailortofortress");
 
                 GameSave.SaveGameState();
-
-                freshload = true;
             }
-        }
-
-        // in progress - why is GetSpawnID() empty? - Maybe not needed if GetSpawnID() is fixed
-        [HarmonyPatch(typeof(DoorTrigger), "Start")]
-        [HarmonyPostfix]
-        public static void DoorTriggerSpawn_mypatch(DoorTrigger __instance)
-        {
-            /*
-            Log.LogWarning("DoorTrigger: " + freshload.ToString());
-            if (freshload)
-            {
-                Log.LogWarning("DoorTrigger - spawn: " + GameSave.GetSaveData().GetSpawnID());
-                if (__instance.doorId == GameSave.GetSaveData().GetSpawnID())
-                {
-                    PlayerGlobal.instance.SetPosition(__instance.spawnPoint.position, false, false);
-                    PlayerGlobal.instance.SetRotation(__instance.spawnPoint.rotation);
-                    PlayerGlobal.SetSpawnPos(__instance.spawnPoint.position, __instance.spawnPoint.rotation);
-                    PlayerGlobal.instance.SetSafePos(__instance.spawnPoint.position);
-                    freshload = false;
-                }
-            }*/
-        }
-
-        // in progress - just logging
-        [HarmonyPatch(typeof(GameSave), "populateDataStructure")]
-        [HarmonyPrefix]
-        public static bool Respawn54s_mypatch(string ___spawnId)
-        {
-            Log.LogWarning("populateDataStructure - SpawnID: " + ___spawnId);
-            return true;
-        }
-
-        // in progress - just logging
-        [HarmonyPatch(typeof(GameSave), "Load")]
-        [HarmonyPostfix]
-        public static void Respawn54_mypatch(string ___spawnId)
-        {
-            Log.LogWarning("post Load saveFile spawnID: " + ___spawnId);
-            /*try
-            {
-                string callingFuncName = new StackFrame(1).GetMethod().Name;
-                string callingFuncType = new StackFrame(1).GetMethod().DeclaringType.ToString();
-                for (int i = 1; i < 3; i++)
-                {
-                    callingFuncName = new StackFrame(i).GetMethod().Name;
-                    callingFuncType = new StackFrame(i).GetMethod().DeclaringType.ToString();
-                    Log.LogWarning("caller[" + i.ToString() + "]: " + callingFuncType + "." + callingFuncName);
-                }
-            }
-            finally { }*/
-        }
-
-        // in progress - just logging
-        [HarmonyPatch(typeof(ShortcutDoor), "startUp")]
-        [HarmonyPostfix]
-        public static void Respawn3_mypatch(ShortcutDoor __instance, bool ___didStartup)
-        {
-            Log.LogWarning("ShortcutDoor starup spawn: " + GameSave.currentSave.GetSpawnID());
-            /*
-            if (!___didStartup)
-            {
-                DoorTrigger[] hinges = FindObjectsOfType(typeof(DoorTrigger)) as DoorTrigger[];
-                foreach (DoorTrigger hinge in hinges)
-                {
-                    Log.LogWarning("---------------id spawn: " + hinge.doorId + "  " + GameSave.currentSave.GetSpawnID());
-                    if (hinge.doorId == GameSave.currentSave.GetSpawnID())
-                    {
-                        PlayerGlobal.SetSpawnPos(hinge.transform.position, hinge.transform.rotation);
-                        PlayerGlobal.instance.SetPosition(hinge.transform.position, false, false);
-                    }
-
-                }
-                Log.LogWarning("keyId: " + __instance.keyId);
-                Log.LogWarning("GetSpawnId: " + GameSave.currentSave.GetSpawnID());
-                Log.LogWarning("spawnedatDoor: " + DoorTrigger.spawnedAtDoor.ToString());
-                if (__instance.keyId == GameSave.currentSave.GetSpawnID() && !DoorTrigger.spawnedAtDoor)
-                {
-                    Log.LogWarning("-------------------------------start2: ");
-                    DoorTrigger[] hinges = FindObjectsOfType(typeof(DoorTrigger)) as DoorTrigger[];
-                    foreach (DoorTrigger hinge in hinges)
-                    {
-                        Log.LogWarning("---------------id spawn: " + hinge.doorId + "  " + GameSave.currentSave.GetSpawnID());
-                        if (hinge.doorId == GameSave.currentSave.GetSpawnID())
-                        {
-                            PlayerGlobal.SetSpawnPos(hinge.transform.position, hinge.transform.rotation);
-                            PlayerGlobal.instance.SetPosition(hinge.transform.position, false, false);
-                        }
-                        
-                    }
-                }
-            }*/
-        }
-
-        // in progress - just logging  - who called SetPosition?
-        [HarmonyPatch(typeof(PlayerGlobal), "SetPosition")]
-        [HarmonyPrefix]
-        public static bool SetPosition_mypatch(Vector3 pos)
-        {
-            Log.LogWarning("Position set to: " + pos);
-            try
-            {
-                string callingFuncName = new StackFrame(1).GetMethod().Name;
-                string callingFuncType = new StackFrame(1).GetMethod().DeclaringType.ToString();
-                for (int i = 1; i < 6; i++)
-                {
-                    callingFuncName = new StackFrame(i).GetMethod().Name;
-                    callingFuncType = new StackFrame(i).GetMethod().DeclaringType.ToString();
-                    Log.LogWarning("caller[" + i.ToString() + "]: " + callingFuncType + "." + callingFuncName);
-                }
-            }
-            catch { return true; }
-            return true;
         }
     }
 }

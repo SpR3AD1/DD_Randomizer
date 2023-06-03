@@ -89,7 +89,11 @@ namespace DD_Randomizer
             "d_frog_boss",
             "d_frog_boss",
             "forest_buggy",
-            "forest_buggy"
+            "forest_buggy",/*
+            "avarice_hod_anc_forest",
+            "avarice_hod_anc_forest",
+            "avarice_hod_anc_fortress",
+            "avarice_hod_anc_fortress"*/
         };
 
         // matching scenes
@@ -162,7 +166,11 @@ namespace DD_Randomizer
             "boss_frog",
             "lvl_swamp",
             "lvl_Graveyard",
-            "lvl_Forest"
+            "lvl_Forest",/*
+            "AVARICE_WAVES_Forest",
+            "lvl_Forest",
+            "AVARICE_WAVES_Fortress",
+            "lvl_FrozenFortress"*/
         };
 
         // list with shuffled IDs
@@ -211,9 +219,15 @@ namespace DD_Randomizer
         [HarmonyPostfix]
         public static void Randomize()
         {
-            var Entries = Enumerable.Range(0, IDs.Count()).ToList();
             var Exits = Enumerable.Range(0, IDs.Count()).ToList();
-            for (int i = 0; i < Exits.Count(); i++)
+            var Entries = Enumerable.Range(0, IDs.Count()).ToList();
+            var OrgExits = Enumerable.Range(0, IDs.Count()).ToList();
+            var OrgEntries = Enumerable.Range(0, IDs.Count()).ToList();
+            for (int i = 0; i < IDs.Count(); i++)
+            {
+                shuffleIDs[i] = -1;
+            }
+            for (int i = 0; i < Entries.Count(); i++)
             {
                 int id = IDs.FindIndex(x => x.Equals(IDs[i], StringComparison.OrdinalIgnoreCase));
                 if (id > -1)
@@ -222,45 +236,51 @@ namespace DD_Randomizer
                 }
                 if (id > -1)
                 {
-                    Exits[i] = id;
+                    Entries[i] = id;
+                    OrgEntries[i] = id;
                 }
                 else
                 {
-                    Log.LogWarning("Error at generating Rondom Seed");
+                    Log.LogWarning("Error at generating Random Seed");
                 }
             }
 
             Random rnd = new Random(RandomSeed.Value.GetHashCode());
-            while (Exits.Count() > 0)
+            for (int k=0; k<IDs.Count();k++)
             {
-                var ActiveExits = new List<int>();
-                for (int i = 1; i < Entries.Count(); i++)
+                if (shuffleIDs[k] < 0)
                 {
-                    if ((IDs[Entries[0]] == "sdoor_tutorial") && (scenes[Entries[0]] == "lvl_Tutorial"))
+                    var ActiveExits = new List<int>();
+                    for (int i = 0; i < Entries.Count(); i++)
                     {
-                        if (scenes[Entries[i]].Contains("lvl_hallofdoors"))
+                        if ((IDs[Entries[0]] == "sdoor_tutorial") && (scenes[Entries[0]] == "lvl_hallofdoors"))
                         {
-                            ActiveExits.Add(Exits[i]);
+                            if (!scenes[Exits[i]].Contains("lvl_hallofdoors"))
+                            {
+                                ActiveExits.Add(Exits[i]);
+                            }
+                        }
+                        else
+                        {
+                            if ((scenes[Entries[0]] != "lvl_hallofdoors") || (!(scenes[Exits[i]].Contains("lvl_hallofdoors") && IDs[Exits[i]].Contains("sdoor_tutorial"))))
+                            {
+                                ActiveExits.Add(Exits[i]);
+                            }
                         }
                     }
-                    else
-                    {
-                        if ((scenes[Entries[0]] != "lvl_hallofdoors") || !(scenes[Entries[i]].Contains("lvl_hallofdoors") && IDs[Entries[i]].Contains("sdoor_tutorial")))
-                        {
-                            ActiveExits.Add(Exits[i]);
-                        }
-                    }
+                    ActiveExits.Remove(Entries[0]);
+
+                    int swap = rnd.Next(0, ActiveExits.Count());
+
+                    shuffleIDs[k] = ActiveExits[swap];
+                    shuffleIDs[OrgEntries[OrgExits.FindIndex(x => x == ActiveExits[swap])]] = Entries[0];
+
+                    Exits.Remove(ActiveExits[swap]);
+                    Exits.Remove(Entries[0]);
+                    Entries.Remove(ActiveExits[swap]);
+                    Entries.RemoveAt(0);
+
                 }
-
-                int swap = rnd.Next(0, ActiveExits.Count());
-
-                shuffleIDs[Entries[0]] = ActiveExits[swap];
-                shuffleIDs[Entries[Exits.FindIndex(x => x == ActiveExits[swap])]] = Exits[0];
-
-                Entries.RemoveAt(Exits.FindIndex(x => x == ActiveExits[swap]));
-                Entries.RemoveAt(0);
-                Exits.Remove(ActiveExits[swap]);
-                Exits.RemoveAt(0);
             }
         }
 
@@ -281,10 +301,7 @@ namespace DD_Randomizer
                 ___doorTrigger.sceneToLoad = scene_to_load;
                 ___doorTrigger.targetDoor = door_to_load;
                 ___doorTrigger.doorId = door_to_load;
-                if (scene_to_load == "lvl_hallofdoors")
-                    __instance.keyId = IDs[shuffleIDs[id]];
-                else
-                    __instance.keyId = "";
+                __instance.keyId = "";
             }
         }
 
@@ -324,6 +341,46 @@ namespace DD_Randomizer
             GameSave.SaveGameState();
         }
 
+        // Patching Avarice_Enter randomized
+        [HarmonyPatch(typeof(SceneLoader), "LoadScene")]
+        [HarmonyPrefix]
+        public static bool Avarice_Enter_MyPatch(SceneLoader __instance)
+        {
+            Log.LogWarning("Enter avarice: " + __instance.sceneName);
+            int id = scenes.FindIndex(x => x.Equals(__instance.sceneName, StringComparison.OrdinalIgnoreCase));
+            Log.LogWarning("id1: " + id.ToString());
+            if (id > -1)
+            {
+                string scene_to_load = scenes[shuffleIDs[id]];
+                string door_to_load = IDs[shuffleIDs[id]];
+                __instance.sceneName = scene_to_load;
+                GameSave.GetSaveData().SetSpawnPoint(scene_to_load, door_to_load);
+                GameSave.SaveGameState();
+                Log.LogWarning("Enter avarice new: " + __instance.sceneName);
+            }
+            return true;
+        }
+
+        // Patching Avarice_Leave randomized
+        [HarmonyPatch(typeof(RespawnPrompter), "Leave")]
+        [HarmonyPrefix]
+        public static bool Avarice_Leave_MyPatch(RespawnPrompter __instance)
+        {
+            int id = IDs.FindIndex(x => x.Equals("avarice_" + __instance.returnDoorId, StringComparison.OrdinalIgnoreCase));
+            if (id > -1)
+            {
+                id += scenes.GetRange(id, 2).FindIndex(x => x.Equals(__instance.returnSceneId, StringComparison.OrdinalIgnoreCase));
+            }
+            if (id > -1)
+            {
+                string scene_to_load = scenes[shuffleIDs[id]];
+                string door_to_load = IDs[shuffleIDs[id]];
+                __instance.returnSceneId = scene_to_load;
+                __instance.returnDoorId = door_to_load;
+            }
+            return true;
+        }
+
         // Patching transition triggers randomized
         [HarmonyPatch(typeof(DoorTrigger), "OnTriggerEnter")]
         [HarmonyPrefix]
@@ -344,12 +401,12 @@ namespace DD_Randomizer
                     __instance.sceneToLoad = scene_to_load;
                     __instance.targetDoor = door_to_load;
                     __instance.doorId = door_to_load;
-                    if ((door_to_load.Contains("sdoor_")) && scene_to_load.Contains("hallofdoors"))
-                    {
-                        GameSave.GetSaveData().SetKeyState(door_to_load, true, true);
-                        GameSave.SaveGameState();
-                    }
                 }
+            }
+            if ((__instance.targetDoor.Contains("sdoor_")) && __instance.sceneToLoad.Contains("hallofdoors"))
+            {
+                GameSave.GetSaveData().SetKeyState(__instance.targetDoor, true, true);
+                GameSave.SaveGameState();
             }
             return true;
         }
@@ -445,6 +502,8 @@ namespace DD_Randomizer
 
                 // set spawn to tutorial door
                 GameSave.GetSaveData().SetSpawnPoint("lvl_hallofdoors", "sdoor_tutorial");
+
+                //GameSave.GetSaveData().SetSpawnPoint("avarice1_spawn", "AVARICE_WAVES_Forest");
 
                 GameSave.SaveGameState();
             }

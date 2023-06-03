@@ -253,7 +253,7 @@ namespace DD_Randomizer
                     var ActiveExits = new List<int>();
                     for (int i = 0; i < Entries.Count(); i++)
                     {
-                        if ((IDs[Entries[0]] == "sdoor_tutorial") && (scenes[Entries[0]] == "lvl_hallofdoors"))
+                        if ((IDs[OrgEntries[k]] == "sdoor_tutorial") && (scenes[OrgEntries[k]] == "lvl_hallofdoors"))
                         {
                             if (!scenes[Exits[i]].Contains("lvl_hallofdoors"))
                             {
@@ -262,13 +262,13 @@ namespace DD_Randomizer
                         }
                         else
                         {
-                            if ((scenes[Entries[0]] != "lvl_hallofdoors") || (!(scenes[Exits[i]].Contains("lvl_hallofdoors") && IDs[Exits[i]].Contains("sdoor_tutorial"))))
+                            if ((scenes[OrgEntries[k]] != "lvl_hallofdoors") || (!(scenes[Exits[i]].Contains("lvl_hallofdoors") && IDs[Exits[i]].Contains("sdoor_tutorial"))))
                             {
                                 ActiveExits.Add(Exits[i]);
                             }
                         }
                     }
-                    ActiveExits.Remove(Entries[0]);
+                    ActiveExits.Remove(OrgEntries[k]);
 
                     int swap = rnd.Next(0, ActiveExits.Count());
 
@@ -340,7 +340,7 @@ namespace DD_Randomizer
             GameSave.GetSaveData().SetSpawnPoint(__instance.targetScene, __instance.doorId);
             GameSave.SaveGameState();
         }
-
+        /*
         // Patching Avarice_Enter randomized
         [HarmonyPatch(typeof(SceneLoader), "LoadScene")]
         [HarmonyPrefix]
@@ -379,7 +379,7 @@ namespace DD_Randomizer
                 __instance.returnDoorId = door_to_load;
             }
             return true;
-        }
+        }*/
 
         // Patching transition triggers randomized
         [HarmonyPatch(typeof(DoorTrigger), "OnTriggerEnter")]

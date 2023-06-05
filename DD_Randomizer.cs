@@ -7,7 +7,6 @@ using System.Linq;
 using UnityEngine;
 using Random = System.Random;
 using BepInEx.Configuration;
-using System.Numerics;
 using Vector3 = UnityEngine.Vector3;
 
 namespace DD_Randomizer
@@ -185,6 +184,12 @@ namespace DD_Randomizer
         public static ConfigEntry<string> RandomSeed;
         public static String RandomSeedString;
 
+        //options
+        public static bool skipChandler = true;
+        public static bool twoWayLocks = true;
+        public static bool randomAvas = false;
+
+
         public void Awake()
         {
             Log = base.Logger;
@@ -213,6 +218,9 @@ namespace DD_Randomizer
                 mytextFieldStyle.alignment = TextAnchor.MiddleCenter;
                 RandomSeedString = GUI.TextField(new Rect(Screen.width / 2 - 200, 100, 600, 100), RandomSeedString, mytextFieldStyle);
                 RandomSeed.Value = RandomSeedString;
+
+
+                MenuGUI.OnGUI();
             }
         }
 

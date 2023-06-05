@@ -7,6 +7,8 @@ using System.Linq;
 using UnityEngine;
 using Random = System.Random;
 using BepInEx.Configuration;
+using System.Numerics;
+using Vector3 = UnityEngine.Vector3;
 
 namespace DD_Randomizer
 {
@@ -329,8 +331,10 @@ namespace DD_Randomizer
         [HarmonyPostfix]
         public static void Trigger_ForestBuggy_MyPatch(ForestBuggy __instance)
         {
+            Log.LogWarning("Gondola Trigger");
             CameraMovementControl.instance.SetCutsceneMode(false);
             PlayerGlobal.instance.UnPauseInput();
+            PlayerGlobal.instance.UnPauseInput_Cutscene();
             if ((__instance.doorId.Contains("sdoor_")) && __instance.targetScene.Contains("hallofdoors"))
             {
                 GameSave.GetSaveData().SetKeyState(__instance.doorId, true, true);
@@ -340,7 +344,21 @@ namespace DD_Randomizer
             GameSave.GetSaveData().SetSpawnPoint(__instance.targetScene, __instance.doorId);
             GameSave.SaveGameState();
         }
-        /*
+
+        // Patching two way locks
+        [HarmonyPatch(typeof(ButtonPromptArea), "Start")]
+        [HarmonyPostfix]
+        public static void Lock_Triggerarea_MyPatch(ButtonPromptArea __instance)
+        {
+            //if (Settings["two_way_locks"])
+            //{ 
+                if (__instance.prompt == "prompt_unlock")
+                {
+                    __instance.transform.localPosition = new Vector3(0, -1, 0);
+                }
+            //}
+        }
+
         // Patching Avarice_Enter randomized
         [HarmonyPatch(typeof(SceneLoader), "LoadScene")]
         [HarmonyPrefix]
@@ -379,7 +397,7 @@ namespace DD_Randomizer
                 __instance.returnDoorId = door_to_load;
             }
             return true;
-        }*/
+        }
 
         // Patching transition triggers randomized
         [HarmonyPatch(typeof(DoorTrigger), "OnTriggerEnter")]
@@ -465,13 +483,6 @@ namespace DD_Randomizer
             freshload = true;
             if (!GameSave.GetSaveData().IsKeyUnlocked("cts_bus"))
             {
-                GameSave.GetSaveData().SetKeyState("cts_bus", true, true);
-                GameSave.GetSaveData().SetKeyState("handler_intro", true, true);
-                GameSave.GetSaveData().SetKeyState("sdoor_tutorial_hub", true, true);
-                GameSave.GetSaveData().SetKeyState("sdoor_tutorial", true, true);
-                GameSave.GetSaveData().SetKeyState("handler_intro2", true, true);
-                GameSave.GetSaveData().SetKeyState("handler_intro3", true, true);
-                GameSave.GetSaveData().SetKeyState("cts_handler", true, true);
                 GameSave.GetSaveData().SetKeyState("bard_bar_intro", true, true);
                 GameSave.GetSaveData().SetKeyState("bard_cracked_block", true, true);
                 GameSave.GetSaveData().SetKeyState("bard_fort_intro", true, true);
@@ -500,8 +511,19 @@ namespace DD_Randomizer
                 GameSave.GetSaveData().SetKeyState("frog_ghoul_intro", true, true);
                 GameSave.GetSaveData().SetKeyState("c_swamp_intro", true, true);
 
-                // set spawn to tutorial door
-                GameSave.GetSaveData().SetSpawnPoint("lvl_hallofdoors", "sdoor_tutorial");
+                //if (Settings["chandlerskip"])
+                //{
+                    GameSave.GetSaveData().SetKeyState("cts_bus", true, true);
+                    GameSave.GetSaveData().SetKeyState("handler_intro", true, true);
+                    GameSave.GetSaveData().SetKeyState("sdoor_tutorial_hub", true, true);
+                    GameSave.GetSaveData().SetKeyState("sdoor_tutorial", true, true);
+                    GameSave.GetSaveData().SetKeyState("handler_intro2", true, true);
+                    GameSave.GetSaveData().SetKeyState("handler_intro3", true, true);
+                    GameSave.GetSaveData().SetKeyState("cts_handler", true, true);
+
+                    // set spawn to tutorial door
+                    GameSave.GetSaveData().SetSpawnPoint("lvl_hallofdoors", "sdoor_tutorial");
+                //}
 
                 //GameSave.GetSaveData().SetSpawnPoint("avarice1_spawn", "AVARICE_WAVES_Forest");
 

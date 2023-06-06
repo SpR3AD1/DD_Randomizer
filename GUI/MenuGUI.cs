@@ -12,13 +12,13 @@ namespace DD_Randomizer
         public static bool hasInit = false;
 
         //chandler
-        public static GUIBox.ToggleOption chandler = new GUIBox.ToggleOption("Skip bus & Chandler", true);
+        public static GUIBox.ToggleOption chandler = new GUIBox.ToggleOption("Skip bus & Chandler", DD_Randomizer.skipChandler.Value);
 
         //two way locks
-        public static GUIBox.ToggleOption gates = new GUIBox.ToggleOption("Allow gate opening from both sides", true);
+        public static GUIBox.ToggleOption gates = new GUIBox.ToggleOption("Allow gate opening from both sides", DD_Randomizer.twoWayLocks.Value);
 
         //avas
-        public static GUIBox.ToggleOption avas = new GUIBox.ToggleOption("Randomize avarices");
+        public static GUIBox.ToggleOption avas = new GUIBox.ToggleOption("Randomize avarices", DD_Randomizer.randomAvas.Value);
 
         public static void Init()
         {
@@ -35,9 +35,9 @@ namespace DD_Randomizer
             {
                 Init();
             }
-            DD_Randomizer.skipChandler = chandler.GetState();
-            DD_Randomizer.twoWayLocks = gates.GetState();
-            DD_Randomizer.randomAvas = avas.GetState();
+            DD_Randomizer.skipChandler.Value = chandler.GetState();
+            DD_Randomizer.twoWayLocks.Value = gates.GetState();
+            DD_Randomizer.randomAvas.Value = avas.GetState();
 
             gui.OnGUI();
         }

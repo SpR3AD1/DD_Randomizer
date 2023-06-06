@@ -90,11 +90,13 @@ namespace DD_Randomizer
             "d_frog_boss",
             "d_frog_boss",
             "forest_buggy",
-            "forest_buggy",/*
+            "forest_buggy",
+            "avarice_hod_anc_mansion",
+            "avarice_hod_anc_mansion",
             "avarice_hod_anc_forest",
             "avarice_hod_anc_forest",
             "avarice_hod_anc_fortress",
-            "avarice_hod_anc_fortress"*/
+            "avarice_hod_anc_fortress"
         };
 
         // matching scenes
@@ -167,11 +169,13 @@ namespace DD_Randomizer
             "boss_frog",
             "lvl_swamp",
             "lvl_Graveyard",
-            "lvl_Forest",/*
+            "lvl_Forest",
+            "AVARICE_WAVES_Mansion",
+            "lvl_GrandmaMansion",
             "AVARICE_WAVES_Forest",
             "lvl_Forest",
             "AVARICE_WAVES_Fortress",
-            "lvl_FrozenFortress"*/
+            "lvl_FrozenFortress"
         };
 
         // list with shuffled IDs
@@ -184,19 +188,25 @@ namespace DD_Randomizer
         public static ConfigEntry<string> RandomSeed;
         public static String RandomSeedString;
 
-        //options
-        public static bool skipChandler = true;
-        public static bool twoWayLocks = true;
-        public static bool randomAvas = false;
+
+        // Settings
+        public static ConfigEntry<bool> skipChandler;
+        public static ConfigEntry<bool> twoWayLocks;
+        public static ConfigEntry<bool> randomAvas;
 
 
         public void Awake()
         {
             Log = base.Logger;
+
             RandomSeed = base.Config.Bind("General",   // The section under which the option is shown
                                     "RandomSeed",  // The key of the configuration option in the configuration file
                                     "hello world", // The default value
                                     "Random Seed"); // Description of the option to show in the config file
+            skipChandler = base.Config.Bind("Settings", "skipChandler", true, "");
+            twoWayLocks = base.Config.Bind("Settings", "twoWayLocks", true, "");
+            randomAvas = base.Config.Bind("Settings", "randomAvas", false, "");
+
             RandomSeedString = RandomSeed.Value;
             Harmony harmony = new Harmony(pluginGuid);
             harmony.PatchAll(typeof(DD_Randomizer));
@@ -229,6 +239,16 @@ namespace DD_Randomizer
         [HarmonyPostfix]
         public static void Randomize()
         {
+            if (randomAvas.Value)
+            {
+                int id = IDs.FindIndex(x => x.Contains("avarice_"));
+                while (id > -1)
+                {
+                    IDs.RemoveAt(id);
+                    scenes.RemoveAt(id);
+                    id = IDs.FindIndex(x => x.Contains("avarice_"));
+                }
+            }
             var Exits = Enumerable.Range(0, IDs.Count()).ToList();
             var Entries = Enumerable.Range(0, IDs.Count()).ToList();
             var OrgExits = Enumerable.Range(0, IDs.Count()).ToList();
@@ -256,7 +276,7 @@ namespace DD_Randomizer
             }
 
             Random rnd = new Random(RandomSeed.Value.GetHashCode());
-            for (int k=0; k<IDs.Count();k++)
+            for (int k = 0; k < IDs.Count(); k++)
             {
                 if (shuffleIDs[k] < 0)
                 {
@@ -307,7 +327,12 @@ namespace DD_Randomizer
             if (id > -1)
             {
                 string scene_to_load = scenes[shuffleIDs[id]];
-                string door_to_load = IDs[shuffleIDs[id]];
+                string door_to_load = IDs[shuffleIDs[id]].Replace("avarice_", "");
+                if (scene_to_load.Contains("AVARICE_WAVES_"))
+                {
+
+                }
+
                 ___doorTrigger.sceneToLoad = scene_to_load;
                 ___doorTrigger.targetDoor = door_to_load;
                 ___doorTrigger.doorId = door_to_load;
@@ -328,7 +353,7 @@ namespace DD_Randomizer
             if (id > -1)
             {
                 string scene_to_load = scenes[shuffleIDs[id]];
-                string door_to_load = IDs[shuffleIDs[id]];
+                string door_to_load = IDs[shuffleIDs[id]].Replace("avarice_", "");
                 __instance.targetScene = scene_to_load;
                 __instance.doorId = door_to_load;
             }
@@ -358,13 +383,13 @@ namespace DD_Randomizer
         [HarmonyPostfix]
         public static void Lock_Triggerarea_MyPatch(ButtonPromptArea __instance)
         {
-            //if (Settings["two_way_locks"])
-            //{ 
+            if (twoWayLocks.Value)
+            { 
                 if (__instance.prompt == "prompt_unlock")
                 {
                     __instance.transform.localPosition = new Vector3(0, -1, 0);
                 }
-            //}
+            }
         }
 
         // Patching Avarice_Enter randomized
@@ -378,7 +403,7 @@ namespace DD_Randomizer
             if (id > -1)
             {
                 string scene_to_load = scenes[shuffleIDs[id]];
-                string door_to_load = IDs[shuffleIDs[id]];
+                string door_to_load = IDs[shuffleIDs[id]].Replace("avarice_", "");
                 __instance.sceneName = scene_to_load;
                 GameSave.GetSaveData().SetSpawnPoint(scene_to_load, door_to_load);
                 GameSave.SaveGameState();
@@ -400,9 +425,9 @@ namespace DD_Randomizer
             if (id > -1)
             {
                 string scene_to_load = scenes[shuffleIDs[id]];
-                string door_to_load = IDs[shuffleIDs[id]];
+                string door_to_load = IDs[shuffleIDs[id]].Replace("avarice_", "");
                 __instance.returnSceneId = scene_to_load;
-                __instance.returnDoorId = door_to_load;
+                __instance.returnDoorId = door_to_load.Replace("avarice_", "");
             }
             return true;
         }
@@ -423,7 +448,7 @@ namespace DD_Randomizer
                 if (id > -1 && component != null && ___triggered == false)
                 {
                     string scene_to_load = scenes[shuffleIDs[id]];
-                    string door_to_load = IDs[shuffleIDs[id]];
+                    string door_to_load = IDs[shuffleIDs[id]].Replace("avarice_", "");
                     __instance.sceneToLoad = scene_to_load;
                     __instance.targetDoor = door_to_load;
                     __instance.doorId = door_to_load;
@@ -483,6 +508,20 @@ namespace DD_Randomizer
             return false;
         }
 
+        // fix death Spawn
+        [HarmonyPatch(typeof(GameSave), "SetKeyState")]
+        [HarmonyPrefix]
+        public static bool SetKeyState_mypatch(string id, bool state, bool save = false)
+        {
+            Log.LogWarning("id: " + id + "," + state.ToString());
+            if (id == "gift_fire")
+            {
+                GameSave.GetSaveData().SetKeyState("avarice_mansion_won", false, true);
+                GameSave.GetSaveData().SetKeyState("avarice_spirit_1", false, true);
+            }
+            return true;
+        }
+
         // Set start flags to fix progression bugs with cutscenes
         [HarmonyPatch(typeof(SaveSlot), "useSaveFile")]
         [HarmonyPostfix]
@@ -491,6 +530,7 @@ namespace DD_Randomizer
             freshload = true;
             if (!GameSave.GetSaveData().IsKeyUnlocked("cts_bus"))
             {
+                GameSave.GetSaveData().SetKeyState("crow_cut1", true, true);
                 GameSave.GetSaveData().SetKeyState("bard_bar_intro", true, true);
                 GameSave.GetSaveData().SetKeyState("bard_cracked_block", true, true);
                 GameSave.GetSaveData().SetKeyState("bard_fort_intro", true, true);
@@ -504,6 +544,12 @@ namespace DD_Randomizer
                 GameSave.GetSaveData().SetKeyState("potkey_intro", true, true);
                 GameSave.GetSaveData().SetKeyState("pothead_confession1", true, true);
                 GameSave.GetSaveData().SetKeyState("pothead_m_4", true, true);
+                GameSave.GetSaveData().SetKeyState("phcs_1", true, true);
+                GameSave.GetSaveData().SetKeyState("phcs_1.5", true, true);
+                GameSave.GetSaveData().SetKeyState("phcs_5", true, true);
+                GameSave.GetSaveData().SetKeyState("phcs_break", true, true);
+                GameSave.GetSaveData().SetKeyState("phcs_2", true, true);
+                GameSave.GetSaveData().SetKeyState("phcs_3", true, true);
                 GameSave.GetSaveData().SetKeyState("ach_pothead", true, true);
                 GameSave.GetSaveData().SetKeyState("frog_boss_wall_chat", true, true);
                 GameSave.GetSaveData().SetKeyState("frog_dung_meet_1", true, true);
@@ -518,9 +564,10 @@ namespace DD_Randomizer
                 GameSave.GetSaveData().SetKeyState("frog_dung_meet_last", true, true);
                 GameSave.GetSaveData().SetKeyState("frog_ghoul_intro", true, true);
                 GameSave.GetSaveData().SetKeyState("c_swamp_intro", true, true);
+                GameSave.GetSaveData().SetKeyState("shop_prompted", true, true);
 
-                //if (Settings["chandlerskip"])
-                //{
+                if (skipChandler.Value)
+                {
                     GameSave.GetSaveData().SetKeyState("cts_bus", true, true);
                     GameSave.GetSaveData().SetKeyState("handler_intro", true, true);
                     GameSave.GetSaveData().SetKeyState("sdoor_tutorial_hub", true, true);
@@ -531,9 +578,9 @@ namespace DD_Randomizer
 
                     // set spawn to tutorial door
                     GameSave.GetSaveData().SetSpawnPoint("lvl_hallofdoors", "sdoor_tutorial");
-                //}
+                }
 
-                //GameSave.GetSaveData().SetSpawnPoint("avarice1_spawn", "AVARICE_WAVES_Forest");
+                //GameSave.GetSaveData().SetSpawnPoint("lvl_GrandmaGardens", "d_gardenstomansion");
 
                 GameSave.SaveGameState();
             }

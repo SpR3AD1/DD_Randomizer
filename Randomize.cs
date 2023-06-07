@@ -117,8 +117,10 @@ namespace DD_Randomizer
                 Seed = rnd.Next().ToString();
                 count++;
                 DD_Randomizer.Log.LogWarning("Retry");
-                if (count < 10)
+                if (count < 100)
                     Randomize_on_LoadSave();
+                else
+                    DD_Randomizer.shuffleIDs = Enumerable.Range(0, LoadingZones.IDs.Count()).ToList();
             }
         }
     }

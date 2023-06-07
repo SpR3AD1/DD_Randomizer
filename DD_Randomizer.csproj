@@ -32,11 +32,19 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Avarice.cs" />
     <Compile Include="DD_Randomizer.cs" />
     <Compile Include="Doors.cs" />
+    <Compile Include="Fixes.cs" />
+    <Compile Include="Gondola.cs" />
     <Compile Include="GUI\MenuGUI.cs" />
     <Compile Include="GUI\GUIBox.cs" />
+    <Compile Include="LoadingZones.cs" />
+    <Compile Include="ProgressionFlags.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Randomize.cs" />
+    <Compile Include="Settingsclass.cs" />
+    <Compile Include="Transitions.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="0Harmony">

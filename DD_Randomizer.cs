@@ -188,26 +188,49 @@ namespace DD_Randomizer
         public static ConfigEntry<string> RandomSeed;
         public static String RandomSeedString;
 
+        // Struct for making Rndomizer Settings being dynamic
+        public struct Setting
+        {
+            public Setting(ConfigEntry<bool> toggleState, string Description)
+            {
+                this.toggleState = toggleState;
+                this.Description = Description;
+            }
+
+            public string Description;
+
+            public ConfigEntry<bool> toggleState;
+        }
 
         // Settings
-        public static ConfigEntry<bool> skipChandler;
-        public static ConfigEntry<bool> twoWayLocks;
-        public static ConfigEntry<bool> randomAvas;
+        public static Dictionary<string, Setting> Settings = new Dictionary<string, Setting>();
+        public static readonly Dictionary<string, string> Settingslist = new Dictionary<string, string>()
+        {
+            { "skipChandler", "Skip bus & Chandler" },
+            { "twoWayLocks", "Allow gate opening from both sides" },
+            { "randomAvas", "Randomize avarices" },
+            { "test", "Test" },
+        };
 
 
         public void Awake()
         {
             Log = base.Logger;
 
-            RandomSeed = base.Config.Bind("General",   // The section under which the option is shown
+            // Random Seed
+            RandomSeed = base.Config.Bind<String>("General",   // The section under which the option is shown
                                     "RandomSeed",  // The key of the configuration option in the configuration file
                                     "hello world", // The default value
                                     "Random Seed"); // Description of the option to show in the config file
-            skipChandler = base.Config.Bind("Settings", "skipChandler", true, "");
-            twoWayLocks = base.Config.Bind("Settings", "twoWayLocks", true, "");
-            randomAvas = base.Config.Bind("Settings", "randomAvas", false, "");
-
             RandomSeedString = RandomSeed.Value;
+
+            // Settings
+            foreach (var key in Settingslist.Keys)
+            {
+                Settings.Add(key, new Setting(base.Config.Bind<bool>("Settings", key, false, Settingslist[key]), Settingslist[key]));
+            }
+
+            // Patch
             Harmony harmony = new Harmony(pluginGuid);
             harmony.PatchAll(typeof(DD_Randomizer));
         }
@@ -220,15 +243,15 @@ namespace DD_Randomizer
             if (TitleScreen.instance && TitleScreen.instance.saveMenu.HasControl())
             {
                 GUIStyle mylabelStyle = new GUIStyle("label");
-                mylabelStyle.fontSize = 50;
+                mylabelStyle.fontSize = 50 * Screen.height / 1440;
                 mylabelStyle.alignment = TextAnchor.MiddleCenter;
-                GUI.Label(new Rect(Screen.width / 2 - 400, 100, 150, 100), "Seed:", mylabelStyle);
-                GUIStyle mytextFieldStyle = new GUIStyle("textField");
-                mytextFieldStyle.fontSize = 50;
-                mytextFieldStyle.alignment = TextAnchor.MiddleCenter;
-                RandomSeedString = GUI.TextField(new Rect(Screen.width / 2 - 200, 100, 600, 100), RandomSeedString, mytextFieldStyle);
-                RandomSeed.Value = RandomSeedString;
 
+                GUI.Label(new Rect(Screen.width / 2 - (400 * Screen.width / 2560), 100 * Screen.height / 1440, 150 * Screen.width / 2560, 100 * Screen.height / 1440), "Seed:", mylabelStyle);
+                GUIStyle mytextFieldStyle = new GUIStyle("textField");
+                mytextFieldStyle.fontSize = 50 * Screen.height / 1440;
+                mytextFieldStyle.alignment = TextAnchor.MiddleCenter;
+                RandomSeedString = GUI.TextField(new Rect(Screen.width / 2 - (200 * Screen.width / 2560), 100 * Screen.height / 1440, 600 * Screen.width / 2560, 100 * Screen.height / 1440), RandomSeedString, mytextFieldStyle);
+                RandomSeed.Value = RandomSeedString;
 
                 MenuGUI.OnGUI();
             }
@@ -239,7 +262,9 @@ namespace DD_Randomizer
         [HarmonyPostfix]
         public static void Randomize()
         {
-            if (randomAvas.Value)
+
+            // Remove avarice from the data pool if not checked
+            if (Settings["randomAvas"].toggleState.Value)
             {
                 int id = IDs.FindIndex(x => x.Contains("avarice_"));
                 while (id > -1)
@@ -249,15 +274,20 @@ namespace DD_Randomizer
                     id = IDs.FindIndex(x => x.Contains("avarice_"));
                 }
             }
+
+            // initialize lists for randomization
             var Exits = Enumerable.Range(0, IDs.Count()).ToList();
-            var Entries = Enumerable.Range(0, IDs.Count()).ToList();
+            var Entrances = Enumerable.Range(0, IDs.Count()).ToList();
             var OrgExits = Enumerable.Range(0, IDs.Count()).ToList();
-            var OrgEntries = Enumerable.Range(0, IDs.Count()).ToList();
+            var OrgEntrances = Enumerable.Range(0, IDs.Count()).ToList();
             for (int i = 0; i < IDs.Count(); i++)
             {
+                // default value for shuffle-list
                 shuffleIDs[i] = -1;
             }
-            for (int i = 0; i < Entries.Count(); i++)
+
+            // find matching entrances to the exits
+            for (int i = 0; i < Entrances.Count(); i++)
             {
                 int id = IDs.FindIndex(x => x.Equals(IDs[i], StringComparison.OrdinalIgnoreCase));
                 if (id > -1)
@@ -266,8 +296,8 @@ namespace DD_Randomizer
                 }
                 if (id > -1)
                 {
-                    Entries[i] = id;
-                    OrgEntries[i] = id;
+                    Entrances[i] = id;
+                    OrgEntrances[i] = id;
                 }
                 else
                 {
@@ -280,10 +310,12 @@ namespace DD_Randomizer
             {
                 if (shuffleIDs[k] < 0)
                 {
+                    // IMPLEMENT LOGIC HERE by defining possible exits for an entrance
                     var ActiveExits = new List<int>();
-                    for (int i = 0; i < Entries.Count(); i++)
+                    for (int i = 0; i < Entrances.Count(); i++)
                     {
-                        if ((IDs[OrgEntries[k]] == "sdoor_tutorial") && (scenes[OrgEntries[k]] == "lvl_hallofdoors"))
+                        // Exits for tutorial door in HoD (must not lead to HoD)
+                        if ((IDs[OrgEntrances[k]] == "sdoor_tutorial") && (scenes[OrgEntrances[k]] == "lvl_hallofdoors"))
                         {
                             if (!scenes[Exits[i]].Contains("lvl_hallofdoors"))
                             {
@@ -292,23 +324,29 @@ namespace DD_Randomizer
                         }
                         else
                         {
-                            if ((scenes[OrgEntries[k]] != "lvl_hallofdoors") || (!(scenes[Exits[i]].Contains("lvl_hallofdoors") && IDs[Exits[i]].Contains("sdoor_tutorial"))))
+                            // Exits for other than tutorial door in HoD (must not lead to tutorial door in HoD if coming from HoD)
+                            if ((scenes[OrgEntrances[k]] != "lvl_hallofdoors") || (!(scenes[Exits[i]].Contains("lvl_hallofdoors") && IDs[Exits[i]].Contains("sdoor_tutorial"))))
                             {
                                 ActiveExits.Add(Exits[i]);
                             }
                         }
                     }
-                    ActiveExits.Remove(OrgEntries[k]);
 
+                    // Remove itself from the possible exits pool
+                    ActiveExits.Remove(OrgEntrances[k]);
+
+                    // pick a random entry of the remaining possible exits
                     int swap = rnd.Next(0, ActiveExits.Count());
 
+                    // shuffle two-way connection
                     shuffleIDs[k] = ActiveExits[swap];
-                    shuffleIDs[OrgEntries[OrgExits.FindIndex(x => x == ActiveExits[swap])]] = Entries[0];
+                    shuffleIDs[OrgEntrances[OrgExits.FindIndex(x => x == ActiveExits[swap])]] = Entrances[0];
 
+                    // remove used entries from the available pool
                     Exits.Remove(ActiveExits[swap]);
-                    Exits.Remove(Entries[0]);
-                    Entries.Remove(ActiveExits[swap]);
-                    Entries.RemoveAt(0);
+                    Exits.Remove(Entrances[0]);
+                    Entrances.Remove(ActiveExits[swap]);
+                    Entrances.RemoveAt(0);
 
                 }
             }
@@ -332,7 +370,6 @@ namespace DD_Randomizer
                 {
 
                 }
-
                 ___doorTrigger.sceneToLoad = scene_to_load;
                 ___doorTrigger.targetDoor = door_to_load;
                 ___doorTrigger.doorId = door_to_load;
@@ -383,7 +420,7 @@ namespace DD_Randomizer
         [HarmonyPostfix]
         public static void Lock_Triggerarea_MyPatch(ButtonPromptArea __instance)
         {
-            if (twoWayLocks.Value)
+            if (Settings["twoWayLocks"].toggleState.Value)
             { 
                 if (__instance.prompt == "prompt_unlock")
                 {
@@ -566,7 +603,7 @@ namespace DD_Randomizer
                 GameSave.GetSaveData().SetKeyState("c_swamp_intro", true, true);
                 GameSave.GetSaveData().SetKeyState("shop_prompted", true, true);
 
-                if (skipChandler.Value)
+                if (Settings["skipChandler"].toggleState.Value)
                 {
                     GameSave.GetSaveData().SetKeyState("cts_bus", true, true);
                     GameSave.GetSaveData().SetKeyState("handler_intro", true, true);

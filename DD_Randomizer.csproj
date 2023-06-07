@@ -33,6 +33,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="DD_Randomizer.cs" />
+    <Compile Include="Doors.cs" />
     <Compile Include="GUI\MenuGUI.cs" />
     <Compile Include="GUI\GUIBox.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

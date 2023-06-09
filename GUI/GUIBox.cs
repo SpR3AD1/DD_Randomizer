@@ -221,7 +221,7 @@ namespace GUIBox
             GUI.Label(textRect, text, GUI.skin.label);
 
             var fieldRect = new Rect(textRect.xMax, startCorner.y, width, height);
-            state = Regex.Replace(GUI.TextField(fieldRect, state, GUI.skin.textField), @"[^0-9 ]", "");
+            state = GUI.TextField(fieldRect, state, GUI.skin.textField);
 
             return new Vector2(width, height);
         }

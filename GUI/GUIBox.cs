@@ -192,20 +192,65 @@ namespace GUIBox
         }
     }
 
-    public class NumberBoxOption : BaseOption
+    public class TextFieldOption : BaseOption
+    {
+        public string state;
+        public float height;
+        public string text;
+        public float? overrideHeight = null;
+
+        public TextFieldOption(float width, string text = "", float? overrideHeight = null, string initialState = "")
+        {
+            this.text = text;
+            this.width = width * Screen.width;
+            height = 0;
+            state = initialState;
+            this.overrideHeight = overrideHeight * Screen.height;
+        }
+
+        public string GetState()
+        {
+            return state;
+        }
+
+        public override Vector2 Update(Vector2 startCorner, int fontSize)
+        {
+            height = overrideHeight == null ? fontSize * 1.5f : overrideHeight.Value;
+
+            var textRect = new Rect(startCorner.x, startCorner.y, GUIBox.CalcTextSize(text + "  ", fontSize).x, height);
+            GUI.Label(textRect, text, GUI.skin.label);
+
+            var fieldRect = new Rect(textRect.xMax, startCorner.y, width, height);
+            state = Regex.Replace(GUI.TextField(fieldRect, state, GUI.skin.textField), @"[^0-9 ]", "");
+
+            return new Vector2(width, height);
+        }
+
+        public override float GetHeight()
+        {
+            return height;
+        }
+
+        public override float GetWidth()
+        {
+            return width;
+        }
+    }
+
+    public class NumberFieldOption : BaseOption
     {
         public int state;
         public float height;
         public string text;
         public float? overrideHeight = null;
 
-        public NumberBoxOption(float width, string text = "", float? overrideHeight = null, int initialState = 0)
+        public NumberFieldOption(float width, string text = "", float? overrideHeight = null, int initialState = 0)
         {
             this.text = text;
             this.width = width * Screen.width;
             height = 0;
             state = initialState;
-            this.overrideHeight = overrideHeight;
+            this.overrideHeight = overrideHeight * Screen.height;
         }
 
         public int GetState()

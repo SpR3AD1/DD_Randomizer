@@ -16,7 +16,6 @@ namespace DD_Randomizer
 
         public static String RandomSeedString;
 
-
         public static void Init()
         {
             foreach (var key in DD_Randomizer.Settings.Keys)
@@ -24,6 +23,7 @@ namespace DD_Randomizer
                 toggleOptions.Add(key, new GUIBox.ToggleOption(DD_Randomizer.Settings[key].Description, DD_Randomizer.Settings[key].toggleState.Value));
             }
             var main = new GUIBox.OptionCategory("Randomizer Options", options: toggleOptions.Values.ToArray());
+
             gui = new GUIBox.GUIBox(new UnityEngine.Vector2(0.01f, 0.01f), main);
 
             hasInit = true;
